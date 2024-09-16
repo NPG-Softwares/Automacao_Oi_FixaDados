@@ -6,7 +6,7 @@ from zipfile import ZipFile
 from Objects.Obj_WebAutomation import Driver, sleep
 
 
-def mount_url(url_base: str, **kwargs) -> (str, list):
+def mount_url(url_base: str, **kwargs) -> tuple[str, list]:
     """
     Monta a URL com os argumentos.
 

@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "Automacao Oi VivoDados"
+version = "0.1.0"
+description = "Download de PDFs e Detalhamentos da OI Fixa e Dados"
+authors = ["Nycolas Galdino <nycolaspimentel12@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.32.3"
+python-dotenv = "^1.0.1"
+pandas = "^2.2.2"
+selenium = "^4.24.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -115,7 +115,7 @@ def read_files(details_path: str) -> pd.DataFrame:
             temp_df = __reader_3__(temp_df)
 
         elif 'Documentos nao Baixados' in filename:
-            pass
+            continue
 
         else:
             print("Arquivo", f)

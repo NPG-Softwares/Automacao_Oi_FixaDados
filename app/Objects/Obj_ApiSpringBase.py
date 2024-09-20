@@ -9,8 +9,8 @@ class BaseClient:
         self.cnpj_login = data.get("cnpjLogin")
         self.cpf_gestor = data.get("cpfGestor")
         self.email_gestor = data.get("emailGestor")
-        self.senha = data.get("senha")
-        self.login = data.get("login")
+        self.senha = data.get("senha").strip()
+        self.login = data.get("login").strip()
         self.fatura_enviada_por_email = data.get("faturaEnviadaPorEmail")
         self.email_recebimento_fatura = data.get("emailRecebimentoFatura")
         self.dia_verificacao = data.get("diaVerificacao")
@@ -19,7 +19,7 @@ class BaseClient:
         self.contas: list[BaseInvoice] = []  # Empty list for potential future use
 
     def __repr__(self) -> str:
-        return f"BaseClient(id={self.id}, status={self.status})"
+        return f"BaseClient(ControleDownloadId={self.id}, ClienteId={self.cliente_id}, status={self.status})"
 
 
 class BaseInvoice:
@@ -39,4 +39,4 @@ class BaseInvoice:
         self.login_id = data.get("loginId")
 
     def __repr__(self) -> str:
-        return f"BaseInvoice(id={self.numero_conta}, status={self.status})"
+        return f"BaseInvoice(conta={self.numero_conta}, contaId={self.conta_id}, status={self.status})"

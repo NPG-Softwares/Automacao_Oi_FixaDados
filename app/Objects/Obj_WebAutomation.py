@@ -14,7 +14,6 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
 
 xpath = By.XPATH
 id_selector = By.ID
@@ -31,8 +30,7 @@ class FolderNotExistsError(Exception):
 class Driver:
     """Classe criada para automatizar o download das faturas web"""
 
-    def __init__(self, operadora: str = None, cliente: str = None,
-                 client_folder: str = None, download_folder: str = None):
+    def __init__(self, download_folder: str = None):
         """
         Initializes a new instance of the `Driver` class.
 
@@ -50,10 +48,6 @@ class Driver:
             - The download folder path is normalized to ensure compatibility with Selenium.
             - The download folder path is stored as a private attribute `__download_folder__`.
         """
-
-        self.__operadora__ = operadora
-        self.__cliente__ = cliente
-        self.__client_folder__ = client_folder
 
         if download_folder:
             if not os.path.exists(download_folder):
@@ -88,6 +82,7 @@ class Driver:
         webdriver_options.add_argument('--ignore-ssl-errors')
         webdriver_options.add_argument("--disable-extensions")
         webdriver_options.add_argument('--ignore-certificate-errors')
+        webdriver_options.add_argument("enable-automation")
 
         prefs_args = {
             "safebrowsing.enabled": False,
@@ -107,12 +102,9 @@ class Driver:
         if no_window:
             webdriver_options.add_argument('--headless')
             webdriver_options.add_argument('--no-sandbox')
-            webdriver_options.add_argument("--incognito")
             webdriver_options.add_argument('--disable-gpu')
-            webdriver_options.add_argument("enable-automation")
             webdriver_options.add_argument('--window-size=1420,1080')
-            webdriver_options.add_argument("--disable-features="
-                                           "VizDisplayCompositor")
+            webdriver_options.add_argument("--disable-features=VizDisplayCompositor")
 
         if arguments != []:
             for arg in arguments:

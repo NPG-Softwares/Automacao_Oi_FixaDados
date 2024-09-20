@@ -115,6 +115,7 @@ class API_Spring:
         url = self.end_get_invoices
         headers = {}
         headers['Authorization'] = self.token
+        headers['Status'] = 'PENDENTE'
 
         params = {}
         params['clientId'] = client.cliente_id
@@ -126,7 +127,7 @@ class API_Spring:
 
         return r.json()
 
-    def up_invoice(self, payload: dict, files: dict) -> None:
+    def up_invoice(self, payload: dict, files: list[tuple]) -> None:
         """
         Uploads an invoice to the API using the provided payload and files.
 
@@ -143,18 +144,26 @@ class API_Spring:
         headers = {}
         headers['Authorization'] = self.token
 
-        for file in files.values():
+        for file in files:
             f = {'files': file}
+            temp_payload = payload.copy()
 
-            r = req.post(url, headers=headers, data=payload, files=f)
+            if file[0] == temp_payload['ArquivoAzurePdf']:
+                temp_payload['ArquivoAzureDigital'] = None
+                temp_payload['NomeArquivoDigital'] = None
+            else:
+                temp_payload['ArquivoAzurePdf'] = None
+                temp_payload['NomeArquivoPdf'] = None
+
+            r = req.post(url, headers=headers, data=temp_payload, files=f)
 
             if r.status_code == 200:
-                print(f'\t\t\tArquivo {f.get("files")[0]} enviado com sucesso.')
+                print(f'Arquivo {f.get("files")[0]} enviado com sucesso.')
             elif r.status_code == 413:
                 raise req.exceptions.ContentDecodingError(f'{file[0]}: Arquivo muito grande para ser enviado.')
             elif r.status_code != 200:
                 raise req.exceptions.RequestException(f'Erro [{r.status_code}]: {r.text}')
-        print('\t\t\tFatura enviada com sucesso.')
+        print('Fatura enviada com sucesso.')
 
 
 def filter_logins(api: API_Spring, logins: dict) -> list[BaseClient]:
@@ -189,7 +198,7 @@ def filter_logins(api: API_Spring, logins: dict) -> list[BaseClient]:
     return filtered_logins
 
 
-def get_logins(ambient: Literal['prod', 'hml'] = 'prod') -> list[BaseClient]:
+def get_logins(name: str, ambient: Literal['prod', 'hml'] = 'prod') -> list[BaseClient]:
     """
     Retrieves all logins for the given ambient (environment) and filters out
     invalid logins.
@@ -203,7 +212,6 @@ def get_logins(ambient: Literal['prod', 'hml'] = 'prod') -> list[BaseClient]:
     """
 
     api = API_Spring(ambient)
-    name = 'CELESC'
     fornecedores_ids = api.get_fornecedores_by_name(name)
     logins = []
     for fornecedor_id in fornecedores_ids:

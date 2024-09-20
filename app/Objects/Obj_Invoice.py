@@ -21,6 +21,9 @@ class Invoice:
         self.arquivo = arquivo
         self.designacao = designacao
         self.mesref = mesref
+        self.inicio_periodo = None
+        self.fim_periodo = None
+        self.boleto = None
 
     def __str__(self) -> str:
         atributos = []

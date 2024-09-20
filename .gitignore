@@ -156,3 +156,4 @@ cython_debug/
 
 # Ignore poetry.lock
 *.lock
+app/chromedriver.exe

@@ -2,4 +2,7 @@
 poetry.Lock
 
 # Ignore pycache files
-*/__pycache__
+**/__pycache__
+
+# Ignore chromedriver
+**/*.exe

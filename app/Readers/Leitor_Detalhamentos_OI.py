@@ -114,6 +114,9 @@ def read_files(details_path: str) -> pd.DataFrame:
         elif 'Fatura_Excel' in filename:
             temp_df = __reader_3__(temp_df)
 
+        elif 'Documentos nao Baixados' in filename:
+            pass
+
         else:
             print("Arquivo", f)
             raise AttributeError("Tipo de arquivo não reconhecido")

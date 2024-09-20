@@ -1,16 +1,17 @@
+import os
 from tempfile import TemporaryDirectory
 from functions import Oi_Process
 from Objects.Obj_ApiSpring import LoginError, get_logins
 
 
 def main():
+    current_dir = os.path.dirname(__file__)
     logins = get_logins('OI', 'hml')
-    # logins = logins[17:20]
 
     for login in logins:
         print(f'\n|{"="*60}|')
         print(login)
-        with TemporaryDirectory(prefix='oi_') as oi_path:
+        with TemporaryDirectory(prefix='oi_', dir=current_dir) as oi_path:
             try:
                 Oi_Process(login, oi_path)
             except LoginError as e:

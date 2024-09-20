@@ -1,9 +1,12 @@
 import os
 
-from datetime import datetime as dt
 from zipfile import ZipFile
+from datetime import datetime as dt
+from datetime import timedelta as td
 
-from Objects.Obj_WebAutomation import Driver, sleep
+from Objects.Obj_ApiSpring import LoginError
+from Objects.Obj_ApiSpringBase import BaseClient
+from Objects.Obj_WebAutomation import Driver, WebDriver, sleep
 
 
 def mount_url(url_base: str, **kwargs) -> tuple[str, list]:
@@ -58,14 +61,37 @@ def _verify_download(download_folder) -> None:
     Returns:
         None: This function does not return anything. It prints a success message once the download is complete.
     """
+    now = dt.now()
+    limit = now + td(minutes=3)
+
     while any((f.endswith(('.crdownload', '.tmp')))
               for f in os.listdir(download_folder)):
+        if now >= limit:
+            raise TimeoutError("Download inválido")
+
+        sleep(2)
+
+    while not any(f.endswith('.zip')
+                  for f in os.listdir(download_folder)):
+        if now >= limit:
+            raise TimeoutError("Download inválido")
         sleep(2)
 
     print("Download realizado com sucesso!")
 
 
 def _extract_files(download_folder: str, format_exit: str) -> None:
+    """
+    Extracts the contents of a ZIP file in the specified download folder.
+
+    Args:
+        download_folder (str): The path to the folder where the ZIP file is located.
+        format_exit (str): The format of the extracted files.
+
+    Returns:
+        None: This function does not return anything. It prints a success message once the extraction is complete.
+
+    """
     for f in os.listdir(download_folder):
         if f.endswith(".zip"):
             print(f"Arquivo ZIP encontrado: {f}")
@@ -75,42 +101,54 @@ def _extract_files(download_folder: str, format_exit: str) -> None:
                     os.mkdir(new_folder)
 
                 zip_ref.extractall(new_folder)
-                print('Detalhamento extraído com sucesso')
 
             # remove zip file
             os.remove(os.path.join(download_folder, f))
-            print("Arquivo ZIP removido com sucesso")
 
 
-def down_oi(download_folder, init_date: dt, final_date: dt,
-            tipo_arquivo: str):
+def _verify_do_auth(driver: Driver, webdriver: WebDriver) -> None:
+    sleep(3)
+    try:
+        warning = driver.find_by_element(webdriver, '//p[@id="aviso_info"]').text
+    except Exception:
+        return
 
-    if not os.path.exists(download_folder):
-        os.makedirs(download_folder)
+    if warning and warning != '':
+        raise LoginError(f'Login inválido: {warning}')
 
+
+def get_drivers(download_folder: str) -> tuple[Driver, WebDriver]:
     driver = Driver(download_folder=download_folder)
 
     safe_sites = ["https://portaloisolucoes.oi.com.br/"]
-    webdriver = driver.new_driver(no_window=False, safe_sites=safe_sites)
+    webdriver = driver.new_driver(no_window=True, safe_sites=safe_sites)
 
+    return driver, webdriver
+
+
+def do_auth(driver: Driver, webdriver: WebDriver, login: BaseClient) -> None:
     webdriver.get('https://autenticacao.oi.com.br/nidp/saml2/sso?id=PortalOIContractCorp&sid=0&option=credential&sid=0')
 
     driver.find_by_element(
         webdriver,
         '//*[@id="usernameinput"]',
-        wait=3).send_keys("cpazini@springtelecomgroup.com")
+        wait=3).send_keys(login.login)
 
     driver.find_by_element(
         webdriver,
         '//*[@id="passwordinput"]',
-        wait=3).send_keys("Icatu2024")
+        wait=3).send_keys(login.senha)
 
     driver.click_by_element(webdriver, '//*[@id="loginButtonApp"]', wait=3)
 
+    _verify_do_auth(driver, webdriver)
+
+
+def down_oi(driver: Driver, webdriver: WebDriver,
+            download_folder, init_date: dt, final_date: dt, tipo_arquivo: str):
     base_url = 'https://portaloisolucoes.oi.com.br/todas-as-contas?'
     limit = 30
     offset = 0
-    # contract_id = '33776098'
     payment_status = ['em_aberto', 'sem_status', 'pago', 'cancelado']
 
     document_type = [
@@ -183,6 +221,7 @@ def down_oi(download_folder, init_date: dt, final_date: dt,
 
     i = 0
     tries = 10
+    print('Esperando o download do arquivo...')
     while True:
         try:
             print(f'{i+1} de {tries}', end='... ')
@@ -199,7 +238,5 @@ def down_oi(download_folder, init_date: dt, final_date: dt,
                 raise FileNotFoundError('Arquivo não processado corretamente')
 
     _verify_download(download_folder)
-
-    webdriver.quit()
 
     _extract_files(download_folder, format_exit=tipo_arquivo)

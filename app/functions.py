@@ -79,8 +79,15 @@ def tratar_df(df: pd.DataFrame):
 
     df = df[filtrar_colunas]
     filtrar_colunas.remove('VALOR_DET')
-    df.loc[:, 'VALOR_DET'] = pd.to_numeric(df['VALOR_DET'])
     df.loc[:, 'VALOR_PDF'] = pd.to_numeric(df['VALOR_PDF'].str.replace('.', '').str.replace(',', '.'))
+
+    non_related_df = df[df['VALOR_DET'] == 'nan']
+    if not non_related_df.empty:
+        print(f'\033[1;33m{non_related_df.shape[0]} linhas sem detalhamento\033[m')
+        print(non_related_df)
+        df = df[df['FILE_DET'] != 'nan']
+
+    df.loc[:, 'VALOR_DET'] = pd.to_numeric(df['VALOR_DET'])
     df = df.groupby(filtrar_colunas).sum().reset_index()
     return df
 

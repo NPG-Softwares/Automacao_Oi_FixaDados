@@ -14,9 +14,6 @@ Returns:
 
 import locale
 import os
-import re
-from datetime import datetime as dt
-from datetime import timedelta as td
 
 import pandas as pd
 
@@ -72,21 +69,6 @@ def __reader_3__(df: pd.DataFrame) -> pd.DataFrame:
     })
 
     return df
-
-
-def __encontrar_correspondencia__(valor, lista_valores):
-    for item in lista_valores:
-        if re.search(valor, item):
-            return True
-    return False
-
-
-def __preencher_correspondencia__(valor, lista_valores):
-    for item in lista_valores:
-        if valor in item:
-            return item
-
-    return False
 
 
 def read_files(details_path: str) -> pd.DataFrame:
@@ -148,57 +130,14 @@ def read_files(details_path: str) -> pd.DataFrame:
             temp_df = temp_df.reset_index()
 
             temp_df['FILE_DET'] = filename
+            temp_df['FULL_PATH_FILE_DET'] = os.path.join(details_path, filename)
             df = pd.concat([df, temp_df], ignore_index=True)
 
     return df
 
 
-def concat_with_db() -> pd.DataFrame:
-    worksheet = "HISTÓRICO V1.xlsx"
-    worksheet_path = "Clientes/COMERCIAL/ICATU/GESTÃO/01 - ARQUIVOS MENSAIS"
-    history_path_file = os.path.join(
-        os.environ['OneDrive'],
-        worksheet_path,
-        worksheet
-    )
-
-    df_history = pd.read_excel(history_path_file, 'DESIGNAÇÕES (OPERADORA)')
-
-    df_history_oi = df_history[df_history['OPERADORA'] == 'Oi']
-
-    df_history_oi.loc[(df_history_oi['DESIGNAÇÃO'] != "-")
-                      & (df_history_oi['OPERADORA'] == 'Oi'), 'DESIGNAÇÃO'] = (df_history_oi['DESIGNAÇÃO']
-                                                                               .astype(str)
-                                                                               .str.replace('-', '')
-                                                                               .str.replace(' ', ''))
-
-    df_history_oi
-
-    # Encontrar correspondências aproximadas entre os DataFrames
-    correspondencias = df_ordenado['ORIGEM'].apply(
-        lambda x: encontrar_correspondencia(x, df_history_oi['DESIGNAÇÃO']))
-
-    # Filtrar linhas onde não há correspondência
-    df_com_correspondencia = df_ordenado[correspondencias]
-    df_sem_correspondencia = df_ordenado[~correspondencias]
-
-    df_relativo = df_com_correspondencia['ORIGEM'].apply(
-        lambda x: preencher_correspondencia(x, df_history_oi['DESIGNAÇÃO']))
-
-    df_com_correspondencia.loc[:, 'ORIGEM_FULL'] = df_relativo
-
-    df_final = df_com_correspondencia.merge(df_history_oi,
-                                            how='left',
-                                            left_on='ORIGEM_FULL',
-                                            right_on='DESIGNAÇÃO')
-
-    df_final[df_final['ORIGEM_FULL'].isin(df_history_oi['DESIGNAÇÃO'])]
-
-    df_final.to_csv('final.csv', sep=';', encoding='utf-8')
-
-
 def leitor_detalhamento_oi(details_path: str,
-                           df_invoices: pd.DataFrame) -> None:
+                           df_invoices: pd.DataFrame) -> pd.DataFrame:
     """
     Função principal onde é lido os detalhamentos, concatenado com as
     informações das faturas e no final é gerado um arquivo com essas
@@ -225,46 +164,8 @@ def leitor_detalhamento_oi(details_path: str,
     # Remove os espaçamentos em branco em todas as células
     df = df.map(lambda x: str(x).strip())
 
-    # Ordena e filtra as colunas do dataframe
-    df_ordenado = df[[
-        "CONTA",
-        "FATURA",
-        "VALOR_PDF",
-        "EMISSAO",
-        "VENCIMENTO",
-        "ARQUIVO",
-        "MESREF",
-        "OPERADORA",
-        "CLIENTE",
-        "DDD",
-        "TIPO_LEITURA",
-        "ORIGEM",
-        "VALOR_DET",
-        "DESCRICAO",
-        "FILE_DET"]]
-
-    df_ordenado.loc[:, 'VALOR_DET'] = (df_ordenado['VALOR_DET']
-                                       .str.replace('.', ','))
-
-    df_ordenado.to_excel('Logs/OI_DET.xlsx',
-                         na_rep=None,
-                         index=False)
+    # df.loc[:, 'VALOR_DET'] = (df['VALOR_DET'].str.replace('.', ','))
 
     print('Detalhamento gerado com sucesso!')
 
-
-if __name__ == '__main__':
-    mesref = (dt.now() + td(10)).strftime('%Y-%m')
-    details_path = os.path.join(os.environ['OneDrive'],
-                                "Clientes/COMERCIAL/ICATU/GESTÃO/02 - AUTOMACOES/",
-                                f"PARA TRATAR/{mesref}/OI/DETALHAMENTOS")
-
-    df_invoices = fr"{os.environ['OneDrive']}\Publico\NYCOLAS\01 - PROJETOS\Automacao Spring Control\Logs\oi_files.csv"
-    df_invoices = pd.read_csv(df_invoices,
-                              sep=';',
-                              encoding='utf-8',
-                              dtype=str,
-                              index=False,
-                              )
-
-    leitor_detalhamento_oi(details_path, df_invoices)
+    return df

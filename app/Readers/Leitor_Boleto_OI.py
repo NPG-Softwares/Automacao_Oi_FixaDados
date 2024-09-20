@@ -1,3 +1,4 @@
+import re
 import os
 import locale
 from datetime import datetime as dt
@@ -27,6 +28,7 @@ def __read_format_1__(pdf_object: PDFReader, page_text: str,
 
     """
     invoice.tipo_leitura = 1
+
     lines = page_text.split('\n')
     for i, line in enumerate(lines):
         # print(i, line.strip())
@@ -56,6 +58,10 @@ def __read_format_1__(pdf_object: PDFReader, page_text: str,
 
                     if not invoice.conta:
                         invoice.conta = pdf_object.find_element(
+                            line, '[0-9]{7}', regex=True)
+
+                    if not invoice.conta:
+                        invoice.conta = pdf_object.find_element(
                             line, '[0-9]{8}', regex=True)
 
                     if not invoice.conta:
@@ -65,8 +71,8 @@ def __read_format_1__(pdf_object: PDFReader, page_text: str,
                     if isinstance(invoice.conta, list):
                         invoice.conta = invoice.conta[0]
 
-                if invoice.conta == 'CONTA':
-                    input()
+                if invoice.conta == 'CONTA' or not invoice.conta:
+                    raise ValueError('Conta não encontrada')
 
         if not invoice.fatura:
             if 'FATURA N' in line:
@@ -76,7 +82,7 @@ def __read_format_1__(pdf_object: PDFReader, page_text: str,
             if 'VALOR A PAGAR' in line:
                 line = line + "\n" + lines[i + 1]
                 invoice.valor = pdf_object.find_element(
-                    line, '[0-9]+,[0-9]+', regex=True)
+                    line, '[0-9]*[.]?[0-9]+,[0-9]+', regex=True)
                 if isinstance(invoice.valor, list):
                     if len(invoice.valor) > 0:
                         invoice.valor = invoice.valor[0]
@@ -88,10 +94,6 @@ def __read_format_1__(pdf_object: PDFReader, page_text: str,
         if not invoice.ddd:
             if 'CODIGO DDD' in line:
                 invoice.ddd = lines[i + 1]
-
-        # if not invoice.servicos:
-        #     if '' in line:
-        #         invoice.servicos = lines[i+1]
 
     return True
 
@@ -111,6 +113,7 @@ def __read_format_2__(pdf_object: PDFReader, page_text: str,
 
     """
     invoice.tipo_leitura = 2
+
     lines = page_text.split('\n')
     for i, line in enumerate(lines):
         # print(i, line.strip())
@@ -129,20 +132,8 @@ def __read_format_2__(pdf_object: PDFReader, page_text: str,
                 invoice.mesref = invoice.mesref.strftime("%b-%Y")
 
         if not invoice.conta:
-            if (rm_txt := 'Número do Telefone:') in line:
+            if (rm_txt := 'Contrato Agrupador:') in line:
                 invoice.conta = line.replace(rm_txt, '').strip()
-                invoice.ddd = invoice.conta.split()[0]
-                invoice.conta = (invoice.conta
-                                 .replace(invoice.ddd, '').strip())
-                invoice.conta = '-'.join(invoice.conta.split())
-
-        # if not invoice.conta:
-        #     if 'Contrato Agrupador:' in line:
-        #         invoice.conta = pdf_object.find_element(
-        #             line,
-        #             'Contrato Agrupador:',
-        #             index=2
-        #         )
 
         if not invoice.fatura:
             if 'Fatura: ' in line:
@@ -155,10 +146,6 @@ def __read_format_2__(pdf_object: PDFReader, page_text: str,
         if not invoice.vencimento:
             if 'Data de Vencimento' in line:
                 invoice.vencimento = lines[i + 1]
-
-        # if not invoice.servicos:
-        #     if '' in line:
-        #         invoice.servicos = lines[i+1]
 
     return True
 
@@ -178,6 +165,7 @@ def __read_format_3__(pdf_object: PDFReader, page_text: str,
 
     """
     invoice.tipo_leitura = 3
+
     lines = page_text.split('\n')
     for i, line in enumerate(lines):
         pass
@@ -237,7 +225,6 @@ def ler_boleto_oi(invoices_path):
         if not f.endswith('.pdf'):
             continue
 
-        print('\n' * 2 + '=' * 90)
         print(f"Lendo o arquivo {f}...")
         obj_pdf = PDFReader(f, invoices_path)
         invoice = Invoice()
@@ -247,8 +234,9 @@ def ler_boleto_oi(invoices_path):
         pdf = obj_pdf.read_pdf(engine)
 
         invoice.operadora = "Oi"
-        invoice.cliente = "Icatu"
         invoice.arquivo = f
+        invoice.path = invoices_path
+        invoice.full_path_file_pdf = os.path.join(invoices_path, f)
         invoice.ddd = None
 
         try:
@@ -256,18 +244,28 @@ def ler_boleto_oi(invoices_path):
                            else pdf.page_count)
             all_pages_text = []
             for pag in range(total_pages):
-                print("Numero da página:", pag + 1)
+                # print("Numero da página:", pag + 1)
                 page: str = obj_pdf.get_text(pdf, pag)
 
                 all_pages_text.append(page)
 
             full_text = '\n'.join(all_pages_text)
 
-            if 'Contrato Agrupador:' in full_text:
+            cod_barras = re.findall(r'(?:\d{5,}[\s.-]?\d\s+){4}', full_text)
+            invoice.boleto = ' '.join(cod_barras[0].split('\n')[0].split(' '))
+
+            periodo = re.findall(r'[0-9]{2}/[0-9]{2}/[0-9]+ [aA] [0-9]{2}/[0-9]{2}/[0-9]+', full_text)
+            if periodo:
+                periodo = periodo[0].lower().split(' a ')
+                invoice.inicio_periodo = periodo[0]
+                invoice.fim_periodo = periodo[1]
+
+            if 'contrato agrupador:' in full_text.lower():
                 __read_format_2__(obj_pdf, full_text, invoice)
 
             elif ('VALOR REFERENTE A CONTA CUSTOMIZADA' in full_text or
-                    'PLANO LOCAL' in full_text):
+                    'PLANO LOCAL' in full_text or
+                    'TELEFONE/CONTRATO' in full_text):
                 __read_format_1__(obj_pdf, full_text, invoice)
 
             elif ('CHEGOU SUA FATURA DA OI' in full_text or

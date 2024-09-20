@@ -1,4 +1,5 @@
 import os
+import platform
 from time import sleep, time
 
 from selenium.common.exceptions import (ElementClickInterceptedException,
@@ -132,14 +133,16 @@ class Driver:
         Returns:
             WebDriver: A new WebDriver instance based on the specified options.
         """
-        try:
-            return Chrome(service=Service(ChromeDriverManager().install()),
-                          options=self.__options__(no_window=no_window,
-                                                   safe_sites=safe_sites))
-        except Exception:
-            return Chrome(service=Service(),
-                          options=self.__options__(no_window=no_window,
-                                                   safe_sites=safe_sites))
+        match platform.system():
+            case 'Windows':
+                service = Service('chromedriver.exe')
+            case 'Linux':
+                service = Service('/usr/local/bin/chromedriver')
+            case _:
+                service = Service()
+
+        return Chrome(service=service,
+                      options=self.__options__(no_window=no_window, safe_sites=safe_sites))
 
     def find_by_element(self,
                         driver: WebDriver,
@@ -251,28 +254,28 @@ class Driver:
                 try:
                     # get downloaded percentage
                     downloadPercentage = driver.execute_script(
-                        "return document.querySelector('downloads-manager')" +
-                        ".shadowRoot" +
-                        ".querySelector('#downloadsList downloads-item')" +
-                        ".shadowRoot" +
+                        "return document.querySelector('downloads-manager')"
+                        ".shadowRoot"
+                        ".querySelector('#downloadsList downloads-item')"
+                        ".shadowRoot"
                         ".querySelector('#progress').value")
                     if downloadPercentage == 100:
                         sleep(3)
                         self.find_by_element(driver, r'//*[@id="tag"]', wait=5)
                         return driver.execute_script(
-                            "return document" +
-                            ".querySelector('downloads-manager')" +
-                            ".shadowRoot" +
-                            ".querySelector('#downloadsList downloads-item')" +
-                            ".shadowRoot" +
+                            "return document"
+                            ".querySelector('downloads-manager')"
+                            ".shadowRoot"
+                            ".querySelector('#downloadsList downloads-item')"
+                            ".shadowRoot"
                             ".querySelector('div#content  #file-link').text")
                 except Exception:
                     return driver.execute_script(
-                        "return document" +
-                        ".querySelector('downloads-manager')" +
-                        ".shadowRoot" +
-                        ".querySelector('#downloadsList downloads-item')" +
-                        ".shadowRoot" +
+                        "return document"
+                        ".querySelector('downloads-manager')"
+                        ".shadowRoot"
+                        ".querySelector('#downloadsList downloads-item')"
+                        ".shadowRoot"
                         ".querySelector('div#content  #file-link').text")
 
                 if time() > endTime:

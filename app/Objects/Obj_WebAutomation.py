@@ -55,12 +55,6 @@ class Driver:
                 raise FolderNotExistsError(
                     f"O diretório {download_folder} não existe")
 
-            # O selenium exige que a pasta de download tenha uma barra invertida
-            # no final do caminho, e que as barras sejam invertidas, assim evitará
-            # erros.
-            download_folder = download_folder.replace('/', '\\')
-            if download_folder[-1] != '\\':
-                download_folder += '\\'
             self.__download_folder__ = download_folder
 
     def __options__(self, no_window: bool = False,
@@ -81,22 +75,19 @@ class Driver:
         webdriver_options.add_argument('--log-level=3')
         webdriver_options.add_argument("--start-maximized")
         webdriver_options.add_argument('--ignore-ssl-errors')
-        webdriver_options.add_argument("--disable-extensions")
         webdriver_options.add_argument('--ignore-certificate-errors')
-        webdriver_options.add_argument("enable-automation")
+        webdriver_options.add_argument('--allow-insecure-localhost')
+        webdriver_options.add_argument('--allow-running-insecure-content')
 
+        print('Download folder:', self.__download_folder__)
         prefs_args = {
-            "safebrowsing.enabled": False,
-            "download.prompt_for_download": False,
-            "profile.default_content_setting_values.automatic_downloads": 1,
-            "plugins.plugins_list": [{
-                "enabled": False,
-                "name": "Chrome PDF Viewer"}],
-            "download.extensions_to_open": "applications/pdf"
+            "plugins.always_open_pdf_externally": True,  # Garante que o PDF será baixado
+            "download.prompt_for_download": "false",
+            "download.directory_upgrade": "true",
+            "download.default_directory": self.__download_folder__,
+            "profile.default_content_settings.popups": 0,
+            "profile.default_content_setting_values.automatic_downloads": 1
         }
-
-        if self.__download_folder__:
-            prefs_args['download.default_directory'] = self.__download_folder__
 
         webdriver_options.add_experimental_option('prefs', prefs_args)
 
@@ -104,6 +95,7 @@ class Driver:
             webdriver_options.add_argument('--headless')
             webdriver_options.add_argument('--no-sandbox')
             webdriver_options.add_argument('--disable-gpu')
+            webdriver_options.add_argument('--disable-dev-shm-usage')
             webdriver_options.add_argument('--window-size=1420,1080')
             webdriver_options.add_argument("--disable-features=VizDisplayCompositor")
 
@@ -112,8 +104,6 @@ class Driver:
                 webdriver_options.add_argument(arg)
 
         if safe_sites != []:
-            webdriver_options.add_argument('--allow-insecure-localhost')
-            webdriver_options.add_argument('--allow-running-insecure-content')
             sites = ','.join(safe_sites)
             webdriver_options.add_argument(f'--unsafely-treat-insecure-origin-as-secure={sites}')  # noqa
             webdriver_options.add_argument(f'--unsafely-allow-protected-media-identifier-dor-domain={sites}')  # noqa

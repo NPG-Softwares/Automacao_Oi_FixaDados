@@ -1,0 +1,5 @@
+# Ignore Lock poetry file
+poetry.Lock
+
+# Ignore pycache files
+*/__pycache__

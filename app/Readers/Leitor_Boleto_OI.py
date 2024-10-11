@@ -131,6 +131,12 @@ def __read_format_2__(pdf_object: PDFReader, page_text: str,
                 invoice.mesref = dt.strptime(invoice.mesref, '%B %Y')
                 invoice.mesref = invoice.mesref.strftime("%b-%Y")
 
+        if not invoice.mesref:
+            if 'Referência' == line:
+                invoice.mesref = lines[i + 1]
+                invoice.mesref = dt.strptime(invoice.mesref, '%B/%Y')
+                invoice.mesref = invoice.mesref.strftime("%b-%Y")
+
         if not invoice.conta:
             if (rm_txt := 'Contrato Agrupador:') in line:
                 invoice.conta = line.replace(rm_txt, '').strip()
@@ -263,13 +269,13 @@ def ler_boleto_oi(invoices_path):
             if 'contrato agrupador:' in full_text.lower():
                 __read_format_2__(obj_pdf, full_text, invoice)
 
-            elif ('VALOR REFERENTE A CONTA CUSTOMIZADA' in full_text or
-                    'PLANO LOCAL' in full_text or
-                    'TELEFONE/CONTRATO' in full_text):
+            elif 'VALOR REFERENTE A CONTA CUSTOMIZADA' in full_text or \
+                    'PLANO LOCAL' in full_text or \
+                    'TELEFONE/CONTRATO' in full_text:
                 __read_format_1__(obj_pdf, full_text, invoice)
 
-            elif ('CHEGOU SUA FATURA DA OI' in full_text or
-                    'EMPRESAS' in full_text):
+            elif 'CHEGOU SUA FATURA DA OI' in full_text or \
+                    'EMPRESAS' in full_text:
                 __read_format_3__(obj_pdf, full_text, invoice)
 
             else:

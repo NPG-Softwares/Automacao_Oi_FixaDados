@@ -220,7 +220,7 @@ def down_oi(driver: Driver, webdriver: WebDriver,
                        ' and td[5]/p[text()="Disponível"]]/td/a')
 
     i = 0
-    tries = 10
+    tries = 15
     print('Esperando o download do arquivo...')
     while True:
         try:

@@ -1,5 +1,6 @@
 import os
 import locale
+import re
 import pandas as pd
 
 from datetime import datetime as dt
@@ -99,12 +100,15 @@ def criar_fatura(df: pd.DataFrame, login: BaseClient) -> list[tuple[FaturaInfo, 
 
         return dt.strptime(data.lower(), input_format).strftime(output_format)
 
-    def limpar_texto(texto):
-        ignore_chars = ['.', ',', ' ', '-', '/']
-        texto = "".join([char for char in texto if char not in ignore_chars])
+    def limpar_texto(texto: str):
+        texto = re.sub(r'\s', '', texto)
+        texto = texto.replace('1ªVia', '')
+        texto = re.sub(r'[^A-Za-z0-9]+', '', texto)
         return texto
 
     faturas = []
+
+    print('Contas baixadas:', df['CONTA'].unique().tolist())
 
     for _, row in df.iterrows():
         acc = None
@@ -112,8 +116,10 @@ def criar_fatura(df: pd.DataFrame, login: BaseClient) -> list[tuple[FaturaInfo, 
             if limpar_texto(row['CONTA']) == limpar_texto(conta.numero_conta):
                 acc = conta
                 print('Conta localizada:', acc)
+                break
 
         if not acc:
+            print(f'Conta {limpar_texto(row["CONTA"])} não localizada!')
             continue
 
         inv = FaturaInfo()
